@@ -14,8 +14,6 @@ model = A['model']
 HARI = {'Senin': 0, 'Selasa': 1, 'Rabu': 2, 'Kamis': 3, 'Jumat': 4, 'Sabtu': 5, 'Minggu': 6}
 Q = A['kuartil']
 
-def slot(j):
-    return 'Pagi' if j < 11 else 'Siang' if j < 15 else 'Sore' if j < 18 else 'Malam'
 
 def kategori(x):
     return 'Rendah' if x < Q['Q1'] else ('Tinggi' if x > Q['Q3'] else 'Menengah')
@@ -38,15 +36,16 @@ def form(k):
     topik = st.selectbox('Topik', o['Topik'],
                          index=idx(o['Topik'], d['Topik']), key=f'topik_{k}')
     hari = st.selectbox('Hari posting', list(HARI), index=2, key=f'hari_{k}')
-    jam = st.slider('Jam posting (WIB)', r['Hour'][0], r['Hour'][1], d['Hour'], key=f'jam_{k}')
-    st.caption(f'Time slot: {slot(jam)}')
+    slot_post = st.selectbox('Waktu posting', o['Time_Slot'],
+                             index=idx(o['Time_Slot'], d['Time_Slot']), key=f'slot_{k}')
+    st.caption('Pagi < 11.00 | Siang 11.00-14.59 | Sore 15.00-17.59 | Malam ≥ 18.00')
     kata = st.slider('Jumlah kata caption', r['Caption_Word_Count'][0], r['Caption_Word_Count'][1],
                      d['Caption_Word_Count'], key=f'kata_{k}')
     tag = st.slider('Jumlah hashtag', r['Hashtag_Count'][0], r['Hashtag_Count'][1],
                     d['Hashtag_Count'], key=f'tag_{k}')
-    return {'Content_Format': fmt, 'Content_Type': tipe, 'Topik': topik,
+    rreturn {'Content_Format': fmt, 'Content_Type': tipe, 'Topik': topik,
             'Caption_Word_Count': kata, 'Day_of_Week': HARI[hari],
-            'Is_Weekend': int(HARI[hari] >= 5), 'Hour': jam, 'Hashtag_Count': tag}
+            'Is_Weekend': int(HARI[hari] >= 5), 'Time_Slot': slot_post, 'Hashtag_Count': tag}
 
 st.title('What-if Simulator: Estimasi Engagement Konten')
 m = A['metrik']
@@ -80,21 +79,27 @@ if tumpang:
 else:
     st.success('Rentang A dan B tidak tumpang tindih: selisihnya relatif lebih meyakinkan.')
 
-# ---------- Profil Postingan Viral ----------
+# ---------- Tips Konten Berpeluang Viral ----------
 V = A['viral']
 st.divider()
-st.header('Profil Postingan Viral')
-st.write(f"Di sini 'viral' berarti masuk 10% engagement tertinggi (≥ {V['batas']:,.0f} interaksi): "
-         f"{V['n_viral']} dari {V['n_total']} postingan. Pola ini deskriptif dan berasal dari data yang "
-         f"sedikit, jadi bukan jaminan sebuah konten akan viral.")
+st.header('Tips Konten Berpeluang Viral')
+st.caption(f"Viral = masuk 10% engagement tertinggi (≥ {V['batas']:,.0f} interaksi): "
+           f"{V['n_viral']} dari {V['n_total']} postingan. Peluang rata-rata 10%. "
+           f"Datanya sedikit, jadi ini pola, bukan jaminan.")
 
-atribut = st.selectbox('Lihat berdasarkan', V['profil']['Atribut'].unique().tolist())
-tabel = V['profil'][V['profil']['Atribut'] == atribut].drop(columns='Atribut')
-st.dataframe(tabel, use_container_width=True, hide_index=True)
-st.bar_chart(tabel.set_index('Nilai')['Persen_Viral'])
+kolom = st.columns(len(V['ringkas']))
+for c, r in zip(kolom, V['ringkas'].itertuples()):
+    c.metric(r.Aspek, r.Terbaik)
+    c.caption(f"{r.Persen_Viral:.0f}% postingannya viral (dari {r.Jumlah} postingan)")
 
-st.subheader('Viral vs Tidak Viral (nilai median)')
-st.dataframe(V['numerik'], use_container_width=True)
+unggul = V['ringkas'][V['ringkas']['Persen_Viral'] > 10]
+if len(unggul):
+    st.success('Paling sering muncul di konten viral: ' +
+               ', '.join(f"{r.Aspek.lower()} {r.Terbaik}" for r in unggul.itertuples()) + '.')
+else:
+    st.info('Belum ada atribut yang jelas menonjol di data ini.')
 
-st.subheader('Daftar Postingan Viral')
-st.dataframe(V['daftar'], use_container_width=True, hide_index=True)
+with st.expander('Lihat detail per atribut'):
+    atribut = st.selectbox('Atribut', V['profil']['Atribut'].unique().tolist())
+    tabel = V['profil'][V['profil']['Atribut'] == atribut].drop(columns='Atribut')
+    st.dataframe(tabel, use_container_width=True, hide_index=True)
