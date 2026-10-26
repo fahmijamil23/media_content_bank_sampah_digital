@@ -43,7 +43,7 @@ def form(k):
                      d['Caption_Word_Count'], key=f'kata_{k}')
     tag = st.slider('Jumlah hashtag', r['Hashtag_Count'][0], r['Hashtag_Count'][1],
                     d['Hashtag_Count'], key=f'tag_{k}')
-    rreturn {'Content_Format': fmt, 'Content_Type': tipe, 'Topik': topik,
+    return {'Content_Format': fmt, 'Content_Type': tipe, 'Topik': topik,
             'Caption_Word_Count': kata, 'Day_of_Week': HARI[hari],
             'Is_Weekend': int(HARI[hari] >= 5), 'Time_Slot': slot_post, 'Hashtag_Count': tag}
 
